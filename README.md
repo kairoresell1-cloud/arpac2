@@ -6,8 +6,8 @@ Manager AI proattivo per un piccolo team (max 5 persone). Next.js (App Router) +
 
 ```bash
 npm install
-cp .env.example .env.local
-# apri .env.local e inserisci GROQ_API_KEY + SESSION_SECRET
+cp .env.local.example .env.local
+# apri .env.local e inserisci solo GROQ_API_KEY (SESSION_SECRET è già generato)
 npm run dev
 ```
 
@@ -18,9 +18,9 @@ Apri `http://localhost:3000`. Il primo account che registri (pulsante "Unisciti 
 1. **Crea un nuovo progetto su Railway** collegato a questo repository GitHub (push del contenuto di questa cartella, zip incluso).
 2. Railway rileva il `Dockerfile` e builda automaticamente — non serve configurare altro per il build.
 3. **Aggiungi un volume**: Settings → Volumes → crea un volume e montalo su `/data`. Questo è il percorso usato da `DATA_DIR` per persistere `db.json` tra i riavvii del container.
-4. **Variabili d'ambiente** (Settings → Variables):
-   - `GROQ_API_KEY` — la tua chiave Groq
-   - `SESSION_SECRET` — una stringa casuale lunga (es. `openssl rand -hex 32`)
+4. **Variabili d'ambiente** (Settings → Variables). Un `SESSION_SECRET` già generato è incluso in `.env.example` — copialo da lì, oppure usa il tuo:
+   - `GROQ_API_KEY` — la tua chiave Groq (obbligatoria, nessun default possibile)
+   - `SESSION_SECRET` — `a1487af0896d0c53ea688795c0620dcd0169b45b20c501b6c29a6b3db4d749bb` (già pronto; rigeneralo con `openssl rand -hex 32` se preferisci uno tuo, specialmente se questo progetto diventa pubblico)
    - `DATA_DIR` — `/data` (deve combaciare col mount point del volume)
    - `GROQ_MODEL` — opzionale, default `openai/gpt-oss-120b`
    - Per Supabase (opzionale): `NEXT_PUBLIC_SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`
