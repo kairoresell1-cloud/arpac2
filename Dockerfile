@@ -33,7 +33,12 @@ COPY --from=builder --chown=arpac:nodejs /app/.next/static ./.next/static
 RUN mkdir -p /data && chown -R arpac:nodejs /data
 
 USER arpac
-EXPOSE 3000
-ENV PORT=3000
+EXPOSE 8080
+
+# NESSUN valore fisso qui: Railway inietta la propria variabile PORT a
+# runtime e il server.js di Next.js la legge automaticamente
+# (process.env.PORT). Forzare un valore qui può disallinearsi dalla porta
+# che Railway usa davvero per il routing pubblico, causando
+# "Application failed to respond" anche con un container sano e in ascolto.
 
 CMD ["node", "server.js"]
