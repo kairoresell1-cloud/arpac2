@@ -11,6 +11,10 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Garantisce che la cartella esista SEMPRE nell'immagine, anche se il
+# metodo di upload usato (zip, drag&drop, git senza file dentro) ha
+# "perso" la cartella public perché era vuota.
+RUN mkdir -p public
 RUN npm run build
 
 # --- runtime ---
