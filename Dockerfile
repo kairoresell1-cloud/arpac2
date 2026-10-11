@@ -22,6 +22,12 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV DATA_DIR=/data
+# Docker imposta da solo una variabile HOSTNAME col nome/ID del container.
+# Il server standalone di Next.js la legge per decidere l'indirizzo su cui
+# mettersi in ascolto: se non la sovrascriviamo, si lega solo a quel
+# hostname interno invece che a tutte le interfacce, e resta irraggiungibile
+# da fuori il container anche se i log mostrano "Ready" ed è sano.
+ENV HOSTNAME=0.0.0.0
 
 # Utente non-root
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 arpac
