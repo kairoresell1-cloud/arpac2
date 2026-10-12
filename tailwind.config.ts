@@ -5,44 +5,42 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        base: {
-          950: "#07080A",
-          900: "#0C0D10",
-          850: "#111318",
-          800: "#161922",
-          700: "#20242E",
-          600: "#2C313D"
+        surface: {
+          0: "#FFFFFF",
+          50: "#FAFAFB",
+          100: "#F3F4F6",
+          200: "#E9EAED",
+          300: "#DCDEE3"
         },
         ink: {
-          100: "#F2F3F5",
-          300: "#C4C8D1",
-          500: "#8A8F9C",
-          700: "#565B68"
+          900: "#15161A",
+          700: "#4B4D55",
+          500: "#7C7E88",
+          300: "#AEB0B8",
+          100: "#E3E4E8"
         },
         accent: {
-          DEFAULT: "#6E8CFF",
-          soft: "#A9B8FF",
-          dim: "#3A4470"
+          DEFAULT: "#3D6DFF",
+          soft: "#E8EDFF",
+          strong: "#2650D6"
         },
         signal: {
-          ok: "#5FD9A4",
-          warn: "#E8B45C",
-          risk: "#E8705C"
+          ok: "#1FA869",
+          warn: "#C98A1E",
+          risk: "#D4473E"
         }
       },
       borderRadius: {
-        token: "14px",
-        "token-lg": "20px",
-        "token-sm": "9px"
+        token: "16px",
+        "token-lg": "22px",
+        "token-sm": "11px"
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"]
       },
-      backdropBlur: {
-        token: "18px"
-      },
       boxShadow: {
-        token: "0 1px 0 0 rgba(255,255,255,0.04) inset, 0 8px 24px -12px rgba(0,0,0,0.5)"
+        token: "0 1px 2px 0 rgba(21,22,26,0.04), 0 10px 24px -14px rgba(21,22,26,0.14)",
+        "token-sm": "0 1px 2px 0 rgba(21,22,26,0.06)"
       }
     }
   },

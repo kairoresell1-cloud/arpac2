@@ -5,10 +5,22 @@
 create table if not exists members (
   id text primary key,
   nome text not null,
+  email text not null unique,
   ruolo text not null,
   is_owner boolean not null default false,
   password_hash text not null,
+  avatar_colore text not null default '#3D6DFF',
+  avatar_icona text not null default 'persona',
   creato_il timestamptz not null default now()
+);
+
+create table if not exists progetti (
+  id text primary key,
+  nome text not null,
+  descrizione text not null default '',
+  stato text not null default 'attivo',
+  creato_il timestamptz not null default now(),
+  creato_da text references members(id)
 );
 
 create table if not exists tasks (
@@ -18,17 +30,9 @@ create table if not exists tasks (
   stato text not null default 'da_fare',
   assegnato_a text references members(id),
   scadenza timestamptz,
-  progetto_id text,
+  progetto_id text references progetti(id),
   creato_il timestamptz not null default now(),
   aggiornato_il timestamptz not null default now()
-);
-
-create table if not exists progetti (
-  id text primary key,
-  nome text not null,
-  descrizione text not null default '',
-  stato text not null default 'attivo',
-  creato_il timestamptz not null default now()
 );
 
 create table if not exists finanza (
@@ -37,6 +41,7 @@ create table if not exists finanza (
   importo numeric not null,
   descrizione text not null default '',
   ricorrente boolean not null default false,
+  progetto_id text references progetti(id),
   data timestamptz not null default now(),
   creato_il timestamptz not null default now()
 );
@@ -46,6 +51,7 @@ create table if not exists calendario (
   titolo text not null,
   data timestamptz not null,
   note text,
+  progetto_id text references progetti(id),
   creato_il timestamptz not null default now()
 );
 
@@ -64,6 +70,7 @@ create table if not exists proposte (
   descrizione text not null default '',
   motivazione text not null default '',
   payload jsonb not null default '{}',
+  progetto_id text references progetti(id),
   stato text not null default 'in_attesa',
   creata_il timestamptz not null default now(),
   decisa_il timestamptz,
@@ -74,9 +81,11 @@ create table if not exists memorie (
   id text primary key,
   contenuto text not null,
   fonte text not null default '',
+  progetto_id text references progetti(id),
   creata_il timestamptz not null default now()
 );
 
 create index if not exists idx_messaggi_canale on messaggi (canale, timestamp);
 create index if not exists idx_tasks_stato on tasks (stato);
 create index if not exists idx_proposte_stato on proposte (stato);
+create index if not exists idx_tasks_progetto on tasks (progetto_id);

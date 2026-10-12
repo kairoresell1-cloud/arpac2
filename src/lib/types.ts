@@ -1,9 +1,16 @@
+export type Avatar = {
+  colore: string; // es. "#6E8CFF"
+  icona: string; // chiave di un'icona dal set predefinito (vedi components/Avatar.tsx)
+};
+
 export type Member = {
   id: string;
   nome: string;
+  email: string;
   ruolo: string;
   isOwner: boolean;
   passwordHash: string;
+  avatar: Avatar;
   creatoIl: string;
 };
 
@@ -25,6 +32,7 @@ export type Progetto = {
   descrizione: string;
   stato: "attivo" | "in_pausa" | "concluso";
   creatoIl: string;
+  creatoDa: string;
 };
 
 export type MovimentoFinanziario = {
@@ -33,6 +41,7 @@ export type MovimentoFinanziario = {
   importo: number;
   descrizione: string;
   ricorrente: boolean;
+  progettoId: string | null;
   data: string;
   creatoIl: string;
 };
@@ -42,12 +51,18 @@ export type EventoCalendario = {
   titolo: string;
   data: string;
   note: string | null;
+  progettoId: string | null;
   creatoIl: string;
 };
 
+// Chiavi canale:
+//  "generale"                      -> chat principale del team
+//  "progetto:<progettoId>"         -> chat principale di un progetto (ci scrivono tutti)
+//  "privato:<membroId>"            -> chat privata membro<->ARPAC, non legata a un progetto
+//  "privato:<progettoId>:<membroId>" -> chat privata membro<->ARPAC dentro un progetto
 export type Messaggio = {
   id: string;
-  canale: "gruppo" | string; // "gruppo" oppure id membro per chat privata con l'AI
+  canale: string;
   autoreId: string; // id membro, oppure "arpac"
   testo: string;
   timestamp: string;
@@ -58,8 +73,9 @@ export type Proposta = {
   tipo: "progetto" | "task" | "scadenza" | "finanza" | "altro";
   titolo: string;
   descrizione: string;
-  motivazione: string; // il dato specifico che ha generato la proposta
+  motivazione: string;
   payload: Record<string, unknown>;
+  progettoId: string | null;
   stato: "in_attesa" | "approvata" | "rifiutata";
   creataIl: string;
   decisaIl: string | null;
@@ -69,7 +85,8 @@ export type Proposta = {
 export type Memoria = {
   id: string;
   contenuto: string;
-  fonte: string; // da dove viene il fatto (messaggio id, task id, ecc.)
+  fonte: string;
+  progettoId: string | null;
   creataIl: string;
 };
 

@@ -2,71 +2,81 @@ import { readDB } from "./store";
 import { eseguiArpac } from "./ai-session";
 
 // Stato in-memory del processo (unico processo Node persistente su
-// Railway/Docker, output:'standalone' — vedi next.config.js). Non serve
-// persisterlo: se il container riparte, riparte anche il ciclo.
+// Railway/Docker, output:'standalone'). Non serve persisterlo: se il
+// container riparte, riparte anche il ciclo.
 let ultimoBriefingGiorno: string | null = null;
 let ultimoReportGiorno: string | null = null;
-let ultimoControlloGenerico = 0;
+const ultimoCheckPerProgetto: Record<string, number> = {}; // progettoId -> timestamp ms, "" = generale
 
-const INTERVALLO_CONTROLLO_GENERICO_MS = 1000 * 60 * 30; // ogni 30 minuti
+// Più frequente di prima: prima si scriveva quasi solo per emergenze, ora
+// ARPAC fa un giro di check-in proattivo ogni ~90 minuti per ciascun
+// progetto attivo (oltre che per la chat generale), lasciando poi al
+// modello stesso la scelta se dire qualcosa o restare in silenzio — ma con
+// un prompt che la spinge a essere presente, non solo ad allarmare.
+const INTERVALLO_CHECKIN_MS = 1000 * 60 * 90;
 
 function oggiISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+async function checkInSe(scadutoId: string, canale: string, progettoId: string | null, motivo: string, ora: number) {
+  const ultimo = ultimoCheckPerProgetto[scadutoId] || 0;
+  if (ora - ultimo < INTERVALLO_CHECKIN_MS) return;
+  ultimoCheckPerProgetto[scadutoId] = ora;
+  await eseguiArpac({ modalita: "automatico", motivoControllo: motivo, canale, progettoId });
+}
+
 /**
- * Chiamata dal loop di instrumentation.ts ogni 30s. Decide, senza chiamare
- * l'AI ogni volta, QUANDO vale la pena fare un controllo (per non sprecare
- * chiamate Groq a ogni tick). Quando decide di procedere, delega a
- * eseguiArpac in modalità "automatico", che a sua volta può restituire
- * silenzio se non c'è nulla di rilevante.
+ * Chiamata dal loop in src/instrumentation.ts ogni 30s. Briefing/report
+ * fissi una volta al giorno sul canale generale, più un check-in
+ * proattivo periodico per la chat generale e per ogni progetto attivo.
  */
 export async function ticoScheduler() {
   const ora = new Date();
   const oraLocale = ora.getHours();
   const oggi = oggiISO();
+  const adesso = ora.getTime();
 
-  // Briefing mattutino, una volta al giorno tra le 8 e le 9.
   if (oraLocale === 8 && ultimoBriefingGiorno !== oggi) {
     ultimoBriefingGiorno = oggi;
     await eseguiArpac({
       modalita: "automatico",
-      motivoControllo: "Briefing mattutino: riassumi la giornata che inizia (task in scadenza oggi, eventi, proposte in attesa)."
+      motivoControllo: "Briefing mattutino: riassumi la giornata che inizia su tutti i progetti (task in scadenza oggi, eventi, proposte in attesa).",
+      canale: "generale",
+      progettoId: null
     });
     return;
   }
 
-  // Report serale, una volta al giorno tra le 19 e le 20.
   if (oraLocale === 19 && ultimoReportGiorno !== oggi) {
     ultimoReportGiorno = oggi;
     await eseguiArpac({
       modalita: "automatico",
-      motivoControllo: "Report serale: riassumi cosa è successo oggi (task completati, movimenti finanziari, novità) e cosa resta aperto."
+      motivoControllo: "Report serale: riassumi cosa è successo oggi su tutti i progetti (task completati, movimenti finanziari, novità) e cosa resta aperto.",
+      canale: "generale",
+      progettoId: null
     });
     return;
   }
 
-  // Controllo generico (pattern, rischi, scadenze vicine) ogni 30 minuti.
-  if (ora.getTime() - ultimoControlloGenerico > INTERVALLO_CONTROLLO_GENERICO_MS) {
-    ultimoControlloGenerico = ora.getTime();
-    const db = await readDB();
-    // Piccola euristica locale per evitare di chiamare l'AI quando non c'è
-    // proprio nulla che si avvicina a una scadenza o a un task bloccato:
-    // risparmia chiamate Groq nei periodi davvero tranquilli.
-    const scadenzeVicine = db.tasks.some((t) => {
-      if (!t.scadenza || t.stato === "fatto") return false;
-      const giorni = (new Date(t.scadenza).getTime() - ora.getTime()) / (1000 * 60 * 60 * 24);
-      return giorni <= 2;
-    });
-    const taskBloccati = db.tasks.some((t) => t.stato === "bloccato");
-    if (!scadenzeVicine && !taskBloccati && db.tasks.length > 0) {
-      return; // niente di urgente, non vale la pena chiamare l'AI
-    }
+  // Check-in proattivo sulla chat generale.
+  await checkInSe(
+    "generale",
+    "generale",
+    null,
+    "Check-in periodico sulla chat generale: hai qualcosa di utile o interessante da dire sull'insieme dei progetti? Scadenze vicine, task bloccati, pattern nei dati, oppure semplicemente un follow-up su qualcosa menzionato di recente e mai più ripreso.",
+    adesso
+  );
 
-    await eseguiArpac({
-      modalita: "automatico",
-      motivoControllo:
-        "Controllo periodico: verifica scadenze vicine, task bloccati, spese ricorrenti anomale o membri sovraccarichi nei dati reali."
-    });
+  // Check-in proattivo per ogni progetto attivo.
+  const db = await readDB();
+  for (const progetto of db.progetti.filter((p) => p.stato === "attivo")) {
+    await checkInSe(
+      progetto.id,
+      `progetto:${progetto.id}`,
+      progetto.id,
+      `Check-in periodico sul progetto "${progetto.nome}": hai qualcosa di utile o interessante da dire? Scadenze vicine, task bloccati o fermi da un po', spese ricorrenti anomale, un membro sovraccarico, oppure semplicemente curiosità/follow-up su qualcosa menzionato di recente nella chat (es. risultati di un lavoro in corso) di cui nessuno ha più parlato.`,
+      adesso
+    );
   }
 }

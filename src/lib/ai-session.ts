@@ -8,8 +8,8 @@ import { ARPAC_SYSTEM_PROMPT } from "./prompt";
 import { DB, Messaggio } from "./types";
 
 type EsecuzioneArpacInput =
-  | { modalita: "diretto"; mittenteId: string; testoMessaggio: string; canale: string }
-  | { modalita: "automatico"; motivoControllo: string };
+  | { modalita: "diretto"; mittenteId: string; testoMessaggio: string; canale: string; progettoId: string | null }
+  | { modalita: "automatico"; motivoControllo: string; canale: string; progettoId: string | null };
 
 export type EsecuzioneArpacOutput = {
   messaggioAI: Messaggio | null;
@@ -22,28 +22,22 @@ export type EsecuzioneArpacOutput = {
  * Esegue un ciclo completo: legge il DB (lettura pura, no lock), chiama
  * Groq (chiamata di rete, NESSUN lock tenuto durante questa fase), poi
  * applica verifica anti-allucinazioni e scrive il risultato con un lock
- * breve. Questo è il pattern corretto da seguire ovunque nell'app: mai
- * tenere mutateDB() aperto a cavallo di una await di rete.
+ * breve. Pattern da seguire ovunque: mai tenere mutateDB() aperto a
+ * cavallo di una await di rete.
  */
 export async function eseguiArpac(input: EsecuzioneArpacInput): Promise<EsecuzioneArpacOutput> {
-  // 1. Lettura pura, nessun lock.
   const dbLettura = await readDB();
   const contesto = costruisciContesto(dbLettura, input);
   const contestoPrecedente = contestoPrecedenteTestuale(dbLettura);
 
-  const reasoningEffort = input.modalita === "diretto" ? "medium" : "medium";
-
-  // 2. Chiamata di rete: NESSUN lock del DB tenuto qui.
   const rawRisposta = await chiamaArpac({
     systemPrompt: ARPAC_SYSTEM_PROMPT,
     contesto,
-    reasoningEffort
+    reasoningEffort: "medium"
   });
 
   const risposta = parseArpacResponse(rawRisposta);
 
-  // Regola di sicurezza indipendente dal prompt: un messaggio diretto non
-  // può mai risultare in silenzio, qualsiasi cosa dica il modello.
   const forzaRisposta = input.modalita === "diretto" && risposta.silenzio;
   const testoFinale = forzaRisposta
     ? "Ho ricevuto il tuo messaggio ma non sono riuscito a formulare una risposta utile in questo momento. Puoi riformulare?"
@@ -53,7 +47,6 @@ export async function eseguiArpac(input: EsecuzioneArpacInput): Promise<Esecuzio
     return { messaggioAI: null, propostaIds: [], memorieSalvate: 0, avvisiVerifica: [] };
   }
 
-  // 3. Verifica anti-allucinazioni sul testo prima di salvarlo/mostrarlo.
   const verifica = verificaTesto(testoFinale, dbLettura);
   const testoDaMostrare = verifica.ok
     ? testoFinale
@@ -61,16 +54,13 @@ export async function eseguiArpac(input: EsecuzioneArpacInput): Promise<Esecuzio
 
   const memorieVerificate = filtraMemorieVerificabili(risposta.nuoveMemorie, contestoPrecedente);
 
-  // 4. Scrittura: lock breve, solo lettura/scrittura file, nessuna await di
-  // rete all'interno.
   const idMessaggio = nanoid();
   const propostaIds: string[] = [];
 
   await mutateDB((db: DB) => {
-    const canale = input.modalita === "diretto" ? input.canale : "gruppo";
     db.messaggi.push({
       id: idMessaggio,
-      canale,
+      canale: input.canale,
       autoreId: "arpac",
       testo: testoDaMostrare,
       timestamp: new Date().toISOString()
@@ -86,6 +76,7 @@ export async function eseguiArpac(input: EsecuzioneArpacInput): Promise<Esecuzio
         descrizione: p.descrizione,
         motivazione: p.motivazione,
         payload: p.payload,
+        progettoId: input.progettoId,
         stato: "in_attesa",
         creataIl: new Date().toISOString(),
         decisaIl: null,
@@ -98,6 +89,7 @@ export async function eseguiArpac(input: EsecuzioneArpacInput): Promise<Esecuzio
         id: nanoid(),
         contenuto: m.contenuto,
         fonte: m.fonte,
+        progettoId: input.progettoId,
         creataIl: new Date().toISOString()
       });
     }
@@ -105,7 +97,7 @@ export async function eseguiArpac(input: EsecuzioneArpacInput): Promise<Esecuzio
 
   const messaggioAI: Messaggio = {
     id: idMessaggio,
-    canale: input.modalita === "diretto" ? input.canale : "gruppo",
+    canale: input.canale,
     autoreId: "arpac",
     testo: testoDaMostrare,
     timestamp: new Date().toISOString()

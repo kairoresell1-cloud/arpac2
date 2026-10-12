@@ -13,13 +13,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ errore: "propostaId mancante." }, { status: 400 });
   }
 
-  const esito = await mutateDB((db): "ok" | "non_trovata" | "gia_decisa" => {
+  const esito = await mutateDB((db): "ok" | "non_trovata" | "gia_decisa" | "solo_owner" => {
     const proposta = db.proposte.find((p) => p.id === propostaId);
-    if (!proposta) {
-      return "non_trovata";
-    }
-    if (proposta.stato !== "in_attesa") {
-      return "gia_decisa";
+    if (!proposta) return "non_trovata";
+    if (proposta.stato !== "in_attesa") return "gia_decisa";
+
+    const chiAppprova = db.members.find((m) => m.id === membroId);
+    if (proposta.tipo === "progetto" && !chiAppprova?.isOwner) {
+      return "solo_owner";
     }
 
     proposta.stato = "approvata";
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
           stato: "da_fare",
           assegnatoA: payload.assegnatoA ?? null,
           scadenza: payload.scadenza ?? null,
-          progettoId: payload.progettoId ?? null,
+          progettoId: proposta.progettoId,
           creatoIl: new Date().toISOString(),
           aggiornatoIl: new Date().toISOString()
         });
@@ -49,7 +50,8 @@ export async function POST(req: NextRequest) {
           nome: proposta.titolo,
           descrizione: proposta.descrizione,
           stato: "attivo",
-          creatoIl: new Date().toISOString()
+          creatoIl: new Date().toISOString(),
+          creatoDa: membroId
         });
         break;
       case "scadenza":
@@ -58,6 +60,7 @@ export async function POST(req: NextRequest) {
           titolo: proposta.titolo,
           data: payload.data ?? new Date().toISOString(),
           note: proposta.descrizione,
+          progettoId: proposta.progettoId,
           creatoIl: new Date().toISOString()
         });
         break;
@@ -68,24 +71,20 @@ export async function POST(req: NextRequest) {
           importo: Number(payload.importo) || 0,
           descrizione: proposta.descrizione,
           ricorrente: Boolean(payload.ricorrente),
+          progettoId: proposta.progettoId,
           data: payload.data ?? new Date().toISOString(),
           creatoIl: new Date().toISOString()
         });
         break;
       default:
-        // tipo "altro": resta solo come proposta approvata, nessuna
-        // scrittura automatica su entità specifiche.
         break;
     }
 
     return "ok";
   });
 
-  if (esito === "non_trovata") {
-    return NextResponse.json({ errore: "Proposta non trovata." }, { status: 404 });
-  }
-  if (esito === "gia_decisa") {
-    return NextResponse.json({ errore: "Proposta già decisa in precedenza." }, { status: 409 });
-  }
+  if (esito === "non_trovata") return NextResponse.json({ errore: "Proposta non trovata." }, { status: 404 });
+  if (esito === "gia_decisa") return NextResponse.json({ errore: "Proposta già decisa in precedenza." }, { status: 409 });
+  if (esito === "solo_owner") return NextResponse.json({ errore: "Solo l'owner può approvare la creazione di un nuovo progetto." }, { status: 403 });
   return NextResponse.json({ ok: true });
 }

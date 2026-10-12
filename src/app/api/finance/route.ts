@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   const membroId = await getActiveMemberId();
   if (!membroId) return NextResponse.json({ errore: "Non autenticato." }, { status: 401 });
 
-  const { tipo, importo, descrizione, ricorrente, data } = await req.json();
+  const { tipo, importo, descrizione, ricorrente, data, progettoId } = await req.json();
   if (!tipo || !importo) return NextResponse.json({ errore: "tipo e importo richiesti." }, { status: 400 });
 
   const nuovo = {
@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     importo: Number(importo),
     descrizione: descrizione ? String(descrizione) : "",
     ricorrente: Boolean(ricorrente),
+    progettoId: progettoId ?? null,
     data: data ?? new Date().toISOString(),
     creatoIl: new Date().toISOString()
   };

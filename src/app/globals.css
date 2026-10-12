@@ -8,7 +8,7 @@ body {
 }
 
 ::selection {
-  background: rgba(110, 140, 255, 0.35);
+  background: rgba(61, 109, 255, 0.16);
 }
 
 ::-webkit-scrollbar {
@@ -16,27 +16,30 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(21, 22, 26, 0.12);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(21, 22, 26, 0.2);
 }
 
 @layer components {
-  .glass {
-    @apply bg-base-850/70 backdrop-blur-token border border-white/[0.06] shadow-token;
+  .panel {
+    @apply bg-surface-0 border border-surface-200 shadow-token rounded-token-lg;
   }
-  .glass-panel {
-    @apply glass rounded-token-lg;
+  .card {
+    @apply bg-surface-50 border border-surface-200 rounded-token-sm;
   }
   .btn-primary {
-    @apply bg-accent text-base-950 font-medium rounded-token-sm px-4 py-2 transition-colors hover:bg-accent-soft disabled:opacity-40 disabled:cursor-not-allowed;
+    @apply bg-accent text-white font-medium rounded-token-sm px-4 py-2 transition-colors hover:bg-accent-strong disabled:opacity-40 disabled:cursor-not-allowed;
   }
   .btn-ghost {
-    @apply bg-white/[0.04] text-ink-300 rounded-token-sm px-4 py-2 transition-colors hover:bg-white/[0.08] hover:text-ink-100;
+    @apply bg-surface-100 text-ink-700 rounded-token-sm px-4 py-2 transition-colors hover:bg-surface-200 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-danger-ghost {
+    @apply bg-signal-risk/10 text-signal-risk rounded-token-sm px-4 py-2 transition-colors hover:bg-signal-risk/15;
   }
   .input-field {
-    @apply bg-base-900 border border-white/[0.07] rounded-token-sm px-3 py-2 text-ink-100 placeholder:text-ink-700 outline-none focus:border-accent-dim transition-colors;
+    @apply bg-surface-0 border border-surface-300 rounded-token-sm px-3 py-2 text-ink-900 placeholder:text-ink-300 outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-colors;
   }
 }
