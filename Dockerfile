@@ -15,6 +15,12 @@ COPY . .
 # metodo di upload usato (zip, drag&drop, git senza file dentro) ha
 # "perso" la cartella public perché era vuota.
 RUN mkdir -p public
+# Rete di sicurezza: rimuove file di versioni precedenti del progetto che
+# possono essere rimasti nel repo collegato (es. git non ha rimosso un
+# file eliminato in una versione più recente di questo codice). Senza
+# questo, un repo non perfettamente sincronizzato fa fallire la build con
+# errori di tipo su file che nel codice attuale non dovrebbero esistere.
+RUN rm -rf src/app/api/auth/register instrumentation.ts
 RUN npm run build
 
 # --- runtime ---
